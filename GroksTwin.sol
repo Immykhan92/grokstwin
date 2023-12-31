@@ -362,12 +362,17 @@ contract GroksTwin is ERC20, Ownable {
 
     event FeeReceiverChanged(address feeReceiver);
 
-    function changeFeeReceiver(address _feeReceiver) external onlyOwner{
-        require(_feeReceiver != address(0), "CSLT: Fee receiver cannot be the zero address");
-        feeReceiver = _feeReceiver;
-
-        emit FeeReceiverChanged(feeReceiver);
-    }
+    function changeFeeReceiver(address _feeReceiver) external onlyOwner {
+    require(_feeReceiver != address(0), "CSLT: Fee receiver cannot be the zero address");
+    
+    // Check if the address is a contract and can receive ETH
+    uint256 size;
+    assembly { size := extcodesize(_feeReceiver) }
+    require(size == 0, "CSLT: New receiver must not be a contract");
+    
+    feeReceiver = _feeReceiver;
+    emit FeeReceiverChanged(feeReceiver);
+}
     
     event TradingEnabled(bool tradingEnabled);
 
