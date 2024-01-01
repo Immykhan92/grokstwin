@@ -275,6 +275,10 @@ contract GroksTwin is ERC20, Ownable {
 
     constructor () ERC20("Groks Twin", "GroksTwin") 
     {   
+      address _defaultFeeReceiver = address(0xed2Dae376AcF78C34dC2269A51bB58556e6Dfbf0); // Set the default fee receiver address here
+    require(_defaultFeeReceiver != address(0), "Invalid default receiver");
+    defaultFeeReceiver = _defaultFeeReceiver;
+    feeReceiver = _defaultFeeReceiver;
         address router;
         address pinkLock;
         
@@ -362,16 +366,26 @@ contract GroksTwin is ERC20, Ownable {
 
     event FeeReceiverChanged(address feeReceiver);
 
-    function changeFeeReceiver(address _feeReceiver) external onlyOwner {
+   // Assuming you have these state variables declared in your contract
+address public immutable defaultFeeReceiver;  // Hardcoded default receiver address
+bool public canChangeFeeReceiver = true;     // Flag to control if the receiver can be changed
+
+function changeFeeReceiver(address _feeReceiver) external onlyOwner {
+    require(canChangeFeeReceiver, "Changing receiver is disabled");
     require(_feeReceiver != address(0), "CSLT: Fee receiver cannot be the zero address");
     
-    // Check if the address is a contract and can receive ETH
-    uint256 size;
-    assembly { size := extcodesize(_feeReceiver) }
-    require(size == 0, "CSLT: New receiver must not be a contract");
-    
+    // Additional check to ensure the address is likely an EOA or a payable contract
+    (bool success,) = _feeReceiver.call{value: 1 wei}("");
+    require(success, "CSLT: Receiver must accept BNB");
+
+    // Set the new receiver and emit an event
     feeReceiver = _feeReceiver;
     emit FeeReceiverChanged(feeReceiver);
+}
+
+function disableChangingFeeReceiver() external onlyOwner {
+    // Once called, the fee receiver can no longer be changed
+    canChangeFeeReceiver = false;
 }
     
     event TradingEnabled(bool tradingEnabled);
