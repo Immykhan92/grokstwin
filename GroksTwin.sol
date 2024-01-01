@@ -3,8 +3,8 @@
 */
 
 /*
-  Name: Grok Twins
-  Symbol: GrokTwins
+  Name: Groks Twin
+  Symbol: GroksTwin
   Decimals: 9
   Total supply: 80,000,000
   Network: BSC
@@ -249,7 +249,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     }
 }
 
-contract GrokTwins is ERC20, Ownable {
+contract GroksTwin is ERC20, Ownable {
     using Address for address payable;
 
     IUniswapV2Router02 public uniswapV2Router;
@@ -273,7 +273,7 @@ contract GrokTwins is ERC20, Ownable {
     event SwapAndSendFee(uint256 tokensSwapped, uint256 bnbSend);
     event SwapTokensAtAmountUpdated(uint256 swapTokensAtAmount);
 
-    constructor () ERC20("Grok Twins", "GrokTwins") 
+    constructor () ERC20("Groks Twin", "GroksTwin") 
     {   
         address router;
         address pinkLock;
