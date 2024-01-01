@@ -1,5 +1,5 @@
 /**
- *Submitted for verification at BscScan.com on 2023-12-31
+ *Submitted for verification at BscScan.com on 2024-01-01
 */
 
 /*
@@ -119,6 +119,8 @@ abstract contract Ownable is Context {
 contract ERC20 is Context, IERC20, IERC20Metadata {
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => bool) public tradingPairs;
+
 
     uint256 private _totalSupply;
 
@@ -154,6 +156,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
+
 
     function allowance(address owner, address spender) public view virtual override returns (uint256) {
         return _allowances[owner][spender];
@@ -252,6 +255,12 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 contract GroksTwin is ERC20, Ownable {
     using Address for address payable;
 
+    function addTradingPair(address _pair) external onlyOwner {
+        tradingPairs[_pair] = true; 
+    }
+ function removeTradingPair(address pair) external onlyOwner {
+    tradingPairs[pair] = false;
+}
     IUniswapV2Router02 public uniswapV2Router;
     address public  uniswapV2Pair;
 
@@ -366,7 +375,7 @@ contract GroksTwin is ERC20, Ownable {
 
     event FeeReceiverChanged(address feeReceiver);
 
-   // Assuming you have these state variables declared in your contract
+   
 address public immutable defaultFeeReceiver;  // Hardcoded default receiver address
 bool public canChangeFeeReceiver = true;     // Flag to control if the receiver can be changed
 
@@ -438,7 +447,9 @@ function disableChangingFeeReceiver() external onlyOwner {
         } else {
             _totalFees = feeOnTransfer;
         }
-
+        if(tradingPairs[from] || tradingPairs[to]) {
+         _totalFees = (from == uniswapV2Pair || to == uniswapV2Pair) ? feeOnBuy : feeOnTransfer;
+        }
         if (_totalFees > 0) {
             uint256 fees = (amount * _totalFees) / 100;
             amount = amount - fees;
@@ -448,7 +459,7 @@ function disableChangingFeeReceiver() external onlyOwner {
         super._transfer(from, to, amount);
     }
 
-    function setSwapTokensAtAmount(uint256 newAmount, bool _swapEnabled) external onlyOwner{
+    function setSwapTokensAtAmount(uint256 newAmount, bool _swapEnabled) external onlyOwner {
         require(newAmount > totalSupply() / 1_000_000, "CSLT: SwapTokensAtAmount must be greater than 0.0001% of total supply");
         swapTokensAtAmount = newAmount;
         swapEnabled = _swapEnabled;
