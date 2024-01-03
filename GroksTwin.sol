@@ -261,6 +261,9 @@ contract GroksTwin is ERC20, Ownable {
  function removeTradingPair(address pair) external onlyOwner {
     tradingPairs[pair] = false;
 }
+    address public feeReceiverBUSD;
+    address public feeReceiverUSDT;
+
     IUniswapV2Router02 public uniswapV2Router;
     address public  uniswapV2Pair;
 
@@ -372,6 +375,14 @@ contract GroksTwin is ERC20, Ownable {
 
         emit UpdateFees(feeOnSell, feeOnBuy);
     }
+    
+    function setFeeReceiverBUSD(address _feeReceiver) external onlyOwner {
+    feeReceiverBUSD = _feeReceiver;
+}
+
+function setFeeReceiverUSDT(address _feeReceiver) external onlyOwner {
+    feeReceiverUSDT = _feeReceiver;
+}
 
     event FeeReceiverChanged(address feeReceiver);
 
@@ -410,6 +421,7 @@ function disableChangingFeeReceiver() external onlyOwner {
     }
 
     function _transfer(address from,address to,uint256 amount) internal  override {
+        
         require(from != address(0), "CSLT: transfer from the zero address");
         require(to != address(0), "CSLT: transfer to the zero address");
         require(tradingEnabled || _isExcludedFromFees[from] || _isExcludedFromFees[to], "CSLT: Trading not yet enabled!");
@@ -439,22 +451,32 @@ function disableChangingFeeReceiver() external onlyOwner {
 
         uint256 _totalFees;
         if (_isExcludedFromFees[from] || _isExcludedFromFees[to] || swapping) {
-            _totalFees = 0;
-        } else if (from == uniswapV2Pair) {
-            _totalFees = feeOnBuy;
-        } else if (to == uniswapV2Pair) {
-            _totalFees =  feeOnSell;
-        } else {
-            _totalFees = feeOnTransfer;
-        }
-        if(tradingPairs[from] || tradingPairs[to]) {
-         _totalFees = (from == uniswapV2Pair || to == uniswapV2Pair) ? feeOnBuy : feeOnTransfer;
-        }
-        if (_totalFees > 0) {
-            uint256 fees = (amount * _totalFees) / 100;
-            amount = amount - fees;
-            super._transfer(from, address(this), fees);
-        }
+    _totalFees = 0;
+} else if (from == uniswapV2Pair) {
+    _totalFees = feeOnBuy;
+    feeReceiver = feeReceiverBUSD; // Use the fee receiver for the GroksTwin/BUSD pair
+} else if (to == uniswapV2Pair) {
+    _totalFees = feeOnSell;
+    feeReceiver = feeReceiverBUSD; // Use the fee receiver for the GroksTwin/BUSD pair
+} else {
+    _totalFees = feeOnTransfer;
+    feeReceiver = feeReceiverUSDT; // Use the fee receiver for the GroksTwin/USDT pair
+}
+
+if (tradingPairs[from] || tradingPairs[to]) {
+    _totalFees = (from == uniswapV2Pair || to == uniswapV2Pair) ? feeOnBuy : feeOnTransfer;
+    feeReceiver = tradingPairs[from] ? feeReceiverBUSD : feeReceiverUSDT; // Use the appropriate fee receiver based on the trading pair
+}
+if (_totalFees > 0) {
+    uint256 fees = (amount * _totalFees) / 100;
+    amount = amount - fees;
+    super._transfer(from, address(this), fees);
+
+    // Send fees to the selected fee receiver
+    if (feeReceiver != address(0)) {
+        super._transfer(address(this), feeReceiver, fees);
+    }
+}
 
         super._transfer(from, to, amount);
     }
